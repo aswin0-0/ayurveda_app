@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../schema/User");
+const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -82,5 +83,39 @@ async function meHandler(req, res) {
 router.post("/signup", signupHandler);
 router.post("/login", loginHandler);
 router.get("/me", meHandler);
+
+// update current user profile (name, phone, address, password)
+router.patch("/me", requireAuth, async (req, res) => {
+  try {
+    const id = req.user.id;
+    const { name, phone, address, password } = req.body;
+    const updates = {};
+    if (name) updates.name = name;
+    if (phone) updates.phone = phone;
+    if (address) updates.address = address;
+    if (password) updates.password = await bcrypt.hash(password, 10);
+    const user = await User.findByIdAndUpdate(id, updates, {
+      new: true,
+    }).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// delete current user account
+router.delete("/me", requireAuth, async (req, res) => {
+  try {
+    const id = req.user.id;
+    const user = await User.findByIdAndDelete(id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ message: "User deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 module.exports = { router, signupHandler, loginHandler };
