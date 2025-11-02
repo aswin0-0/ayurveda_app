@@ -42,6 +42,19 @@ export default function Dashboard() {
     
     if (userData) {
       setUser(JSON.parse(userData));
+      // verify token with server and refresh user data if possible
+      const API = process.env.REACT_APP_API_URL || '';
+      fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.user) {
+            setUser(data.user);
+            localStorage.setItem('user', JSON.stringify(data.user));
+          }
+        })
+        .catch(() => {
+          // ignore — keep local user
+        });
     }
   }, [navigate]);
 
