@@ -1,0 +1,18 @@
+listen now the main thing in here
+i want to integrate razorpay payment gateway in our application
+like
+while booking appointments user will pay docs fee, so for now the doc fee will be credited to my acc via razorpay
+also while placing order for products that amt also via razorpay payment gateway should be credited to my acc
+all i have is razorpay api, signup and other things including kyc and all is already done from razorpay side, i just want to integrate it in here, so help me with that
+
+steps:
+
+
+Step 1 - Create an order on your server
+Step 2 - Pass Order ID to Checkout
+Step 3 - Handle payment success and failure
+Step 4 - Store fields in server
+Step 5 - Verify payment signature
+Make a Test Transaction
+
+

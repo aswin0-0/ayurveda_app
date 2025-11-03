@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: { type: String, enum: ["patient"], default: "patient" },
+  accountType: { type: String, enum: ["free", "pro"], default: "free" }, //pro users may have extra features later
     phone: { type: String },
     address: { type: String },
     // cart stores product references and quantities for quick cart operations

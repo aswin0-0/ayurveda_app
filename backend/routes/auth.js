@@ -9,7 +9,7 @@ const router = express.Router();
 // handler functions exported so server.js can mount them directly at /auth
 async function signupHandler(req, res) {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, accountType } = req.body;
     if (!name || !email || !password)
       return res.status(400).json({ message: "Missing fields" });
 
@@ -18,7 +18,11 @@ async function signupHandler(req, res) {
       return res.status(400).json({ message: "Email already in use" });
 
     const hash = await bcrypt.hash(password, 10);
-    const user = new User({ name, email, password: hash });
+    const userData = { name, email, password: hash };
+    if (accountType && (accountType === "free" || accountType === "pro")) {
+      userData.accountType = accountType;
+    }
+    const user = new User(userData);
     await user.save();
 
     const token = jwt.sign(
