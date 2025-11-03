@@ -6,7 +6,7 @@ const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
-// patient creates an appointment request
+// patient creates an appointment request (without payment - payment happens separately)
 router.post("/request", requireAuth, async (req, res) => {
   try {
     const { doctorId, date, mode, notes } = req.body;
@@ -25,6 +25,7 @@ router.post("/request", requireAuth, async (req, res) => {
       mode: mode || "online",
       fee: doctor.fee || 0,
       notes,
+      payment_status: "pending", // Payment is pending initially
     });
     await appt.save();
 
@@ -33,8 +34,11 @@ router.post("/request", requireAuth, async (req, res) => {
     patient.records.push(appt._id);
     await patient.save();
 
-    // TODO: notify doctor via push/email in future; for now return the appt
-    res.json({ appointment: appt });
+    // Return the appointment - frontend will initiate payment using the appointmentId
+    res.json({ 
+      appointment: appt,
+      message: "Appointment created. Please complete payment to confirm.",
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -99,6 +103,13 @@ router.post("/:id/confirm", requireAuth, async (req, res) => {
     // ensure the doctor owns this appointment
     if (String(appt.doctor) !== String(req.user.id))
       return res.status(403).json({ message: "Not allowed" });
+
+    // Check if payment is completed before confirming
+    if (appt.payment_status !== "paid") {
+      return res.status(400).json({ 
+        message: "Payment must be completed before confirming appointment" 
+      });
+    }
 
     appt.status = "confirmed";
     await appt.save();

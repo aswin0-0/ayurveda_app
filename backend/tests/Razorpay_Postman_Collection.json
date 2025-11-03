@@ -1,0 +1,526 @@
+{
+  "info": {
+    "name": "Ayurveda App - Razorpay Payments",
+    "description": "Test Razorpay payment integration for appointments, products, and tier upgrades",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "appointmentId",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "razorpay_order_id",
+      "value": ""
+    },
+    {
+      "key": "razorpay_payment_id",
+      "value": ""
+    },
+    {
+      "key": "razorpay_signature",
+      "value": ""
+    },
+    {
+      "key": "doctorId",
+      "value": "REPLACE_WITH_DOCTOR_ID"
+    },
+    {
+      "key": "productId",
+      "value": "REPLACE_WITH_PRODUCT_ID"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('token', response.token);",
+                  "    console.log('✅ Login successful! Token saved.');",
+                  "} else {",
+                  "    console.log('❌ Login failed!');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": ["{{base_url}}"],
+              "path": ["login"]
+            },
+            "description": "Login to get authentication token"
+          }
+        },
+        {
+          "name": "Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/signup",
+              "host": ["{{base_url}}"],
+              "path": ["signup"]
+            },
+            "description": "Create a new user account (run this first if you don't have an account)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Appointment Payment Flow",
+      "item": [
+        {
+          "name": "1. Create Appointment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('appointmentId', response.appointment._id);",
+                  "    console.log('✅ Appointment created!');",
+                  "    console.log('Appointment ID:', response.appointment._id);",
+                  "    console.log('Fee:', response.appointment.fee);",
+                  "    console.log('Payment Status:', response.appointment.payment_status);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"doctorId\": \"{{doctorId}}\",\n  \"date\": \"2025-11-10T10:00:00Z\",\n  \"mode\": \"online\",\n  \"notes\": \"Test appointment for payment integration\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/appointments/request",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", "request"]
+            },
+            "description": "Create an appointment (payment_status will be 'pending')"
+          }
+        },
+        {
+          "name": "2. Create Razorpay Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('razorpay_order_id', response.order.id);",
+                  "    console.log('✅ Razorpay order created!');",
+                  "    console.log('Order ID:', response.order.id);",
+                  "    console.log('Amount:', response.order.amount, 'paise');",
+                  "    console.log('');",
+                  "    console.log('⚠️ Now generate payment signature using:');",
+                  "    console.log('cd backend && node generate-signature.js', response.order.id, 'pay_TEST' + Date.now());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"appointmentId\": \"{{appointmentId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payment/create-order/appointment",
+              "host": ["{{base_url}}"],
+              "path": ["payment", "create-order", "appointment"]
+            },
+            "description": "Create Razorpay order for the appointment"
+          }
+        },
+        {
+          "name": "3. Verify Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpay_order_id\": \"{{razorpay_order_id}}\",\n  \"razorpay_payment_id\": \"PASTE_PAYMENT_ID_HERE\",\n  \"razorpay_signature\": \"PASTE_SIGNATURE_HERE\",\n  \"appointmentId\": \"{{appointmentId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payment/verify/appointment",
+              "host": ["{{base_url}}"],
+              "path": ["payment", "verify", "appointment"]
+            },
+            "description": "Verify payment signature and update appointment"
+          }
+        },
+        {
+          "name": "4. Get Appointment Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/appointments/{{appointmentId}}",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", "{{appointmentId}}"]
+            },
+            "description": "Verify payment status is 'paid'"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Product Payment Flow",
+      "item": [
+        {
+          "name": "1. Add to Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/cart/add",
+              "host": ["{{base_url}}"],
+              "path": ["cart", "add"]
+            },
+            "description": "Add product to cart"
+          }
+        },
+        {
+          "name": "2. Checkout Cart",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('orderId', response.order._id);",
+                  "    console.log('✅ Order created!');",
+                  "    console.log('Order ID:', response.order._id);",
+                  "    console.log('Total:', response.order.total);",
+                  "    console.log('Payment Status:', response.order.payment_status);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"address\": \"123 Test Street, Test City, TS 12345\",\n  \"phone\": \"+919876543210\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/cart/checkout",
+              "host": ["{{base_url}}"],
+              "path": ["cart", "checkout"]
+            },
+            "description": "Checkout and create order"
+          }
+        },
+        {
+          "name": "3. Create Razorpay Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('razorpay_order_id', response.order.id);",
+                  "    console.log('✅ Razorpay order created!');",
+                  "    console.log('Order ID:', response.order.id);",
+                  "    console.log('Amount:', response.order.amount, 'paise');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payment/create-order/product",
+              "host": ["{{base_url}}"],
+              "path": ["payment", "create-order", "product"]
+            },
+            "description": "Create Razorpay order for product purchase"
+          }
+        },
+        {
+          "name": "4. Verify Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpay_order_id\": \"{{razorpay_order_id}}\",\n  \"razorpay_payment_id\": \"PASTE_PAYMENT_ID_HERE\",\n  \"razorpay_signature\": \"PASTE_SIGNATURE_HERE\",\n  \"orderId\": \"{{orderId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payment/verify/product",
+              "host": ["{{base_url}}"],
+              "path": ["payment", "verify", "product"]
+            },
+            "description": "Verify payment signature and update order"
+          }
+        },
+        {
+          "name": "5. Get Order Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/{{orderId}}",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{orderId}}"]
+            },
+            "description": "Verify payment status is 'paid'"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tier Upgrade Flow",
+      "item": [
+        {
+          "name": "1. Create Razorpay Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('razorpay_order_id', response.order.id);",
+                  "    console.log('✅ Upgrade order created!');",
+                  "    console.log('Order ID:', response.order.id);",
+                  "    console.log('Amount:', response.order.amount, 'paise (₹999)');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payment/create-order/upgrade",
+              "host": ["{{base_url}}"],
+              "path": ["payment", "create-order", "upgrade"]
+            },
+            "description": "Create order for tier upgrade (Free → Pro)"
+          }
+        },
+        {
+          "name": "2. Verify Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpay_order_id\": \"{{razorpay_order_id}}\",\n  \"razorpay_payment_id\": \"PASTE_PAYMENT_ID_HERE\",\n  \"razorpay_signature\": \"PASTE_SIGNATURE_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payment/verify/upgrade",
+              "host": ["{{base_url}}"],
+              "path": ["payment", "verify", "upgrade"]
+            },
+            "description": "Verify payment and upgrade user to Pro"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Utility",
+      "item": [
+        {
+          "name": "Get Razorpay Key",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/payment/get-key",
+              "host": ["{{base_url}}"],
+              "path": ["payment", "get-key"]
+            },
+            "description": "Get Razorpay public key ID"
+          }
+        },
+        {
+          "name": "Record Payment Failure",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"appointmentId\": \"{{appointmentId}}\",\n  \"error\": {\n    \"code\": \"BAD_REQUEST_ERROR\",\n    \"description\": \"Payment failed\",\n    \"source\": \"customer\",\n    \"step\": \"payment_authentication\",\n    \"reason\": \"payment_failed\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payment/payment-failed",
+              "host": ["{{base_url}}"],
+              "path": ["payment", "payment-failed"]
+            },
+            "description": "Record a payment failure"
+          }
+        }
+      ]
+    }
+  ]
+}

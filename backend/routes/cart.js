@@ -46,7 +46,7 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
-// checkout - requires address and phone; can use user's stored address/phone or provide in body
+// checkout - requires address and phone; creates order with pending payment
 router.post("/checkout", requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate("cart.product");
@@ -70,21 +70,32 @@ router.post("/checkout", requireAuth, async (req, res) => {
       return { product: p._id, name: p.name, price, quantity: qty };
     });
 
-  const order = new Order({ user: user._id, items, address, phone, total });
-  await order.save();
+    const order = new Order({ 
+      user: user._id, 
+      items, 
+      address, 
+      phone, 
+      total,
+      payment_status: "pending", // Payment is pending initially
+    });
+    await order.save();
 
-  // attach order to user's history so it appears on their profile
-  user.orders = user.orders || [];
-  user.orders.push(order._id);
+    // attach order to user's history so it appears on their profile
+    user.orders = user.orders || [];
+    user.orders.push(order._id);
 
-  // clear user's cart
-  user.cart = [];
+    // clear user's cart
+    user.cart = [];
     // optionally update user's stored address/phone if provided in body
     if (req.body.address) user.address = req.body.address;
     if (req.body.phone) user.phone = req.body.phone;
     await user.save();
 
-    res.json({ order });
+    // Return the order - frontend will initiate payment using the orderId
+    res.json({ 
+      order,
+      message: "Order created. Please complete payment to confirm.",
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
