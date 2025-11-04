@@ -15,6 +15,15 @@ const orderSchema = new mongoose.Schema(
     phone: { type: String, required: true },
     total: { type: Number, required: true },
     status: { type: String, enum: ["placed", "shipped", "delivered", "cancelled"], default: "placed" },
+    // Payment related fields
+    razorpay_order_id: { type: String },
+    razorpay_payment_id: { type: String },
+    razorpay_signature: { type: String },
+    payment_status: {
+      type: String,
+      enum: ["pending", "paid", "failed"],
+      default: "pending",
+    },
   },
   { timestamps: true }
 );

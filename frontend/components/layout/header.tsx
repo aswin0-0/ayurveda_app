@@ -1,10 +1,28 @@
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { Menu, X, Home } from "lucide-react"
-import { useState } from "react"
+import { Menu, X, Home, User, LogOut, Calendar, UserCircle } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { useAuth } from "@/contexts/AuthContext"
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false)
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const profileMenuRef = useRef<HTMLDivElement>(null)
+  const { isAuthenticated, userType, user, logout } = useAuth()
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -52,16 +70,97 @@ export function Header() {
 
           {/* CTA Buttons */}
           <div className="hidden sm:flex items-center gap-3">
-            <Link to="/login">
-              <Button variant="ghost" size="sm">
-                Login
-              </Button>
-            </Link>
-            <Link to="/signup">
-              <Button size="sm" className="bg-primary hover:bg-primary/90">
-                Sign Up
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <div className="relative" ref={profileMenuRef}>
+                <button
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold text-sm">
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <span className="text-sm font-medium">{user?.name?.split(' ')[0] || 'User'}</span>
+                  <svg
+                    className={`w-4 h-4 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Dropdown Menu */}
+                {showProfileMenu && (
+                  <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-lg shadow-lg py-2 z-50">
+                    {/* User Info Header */}
+                    <div className="px-4 py-3 border-b border-border">
+                      <p className="text-sm font-semibold text-foreground">{user?.name || 'User'}</p>
+                      <p className="text-xs text-muted-foreground">{user?.email || ''}</p>
+                    </div>
+
+                    {/* Menu Items */}
+                    <div className="py-1">
+                      <Link
+                        to={userType === 'doctor' ? '/doctor/dashboard' : '/dashboard'}
+                        onClick={() => setShowProfileMenu(false)}
+                        className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted transition-colors"
+                      >
+                        <UserCircle size={16} />
+                        <span>Dashboard</span>
+                      </Link>
+                      
+                      <Link
+                        to={userType === 'doctor' ? '/doctor/dashboard' : '/dashboard/profile'}
+                        onClick={() => setShowProfileMenu(false)}
+                        className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted transition-colors"
+                      >
+                        <User size={16} />
+                        <span>My Profile</span>
+                      </Link>
+
+                      {userType !== 'doctor' && (
+                        <Link
+                          to="/dashboard/appointments"
+                          onClick={() => setShowProfileMenu(false)}
+                          className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted transition-colors"
+                        >
+                          <Calendar size={16} />
+                          <span>My Appointments</span>
+                        </Link>
+                      )}
+                    </div>
+
+                    {/* Logout */}
+                    <div className="border-t border-border pt-1">
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false)
+                          logout()
+                        }}
+                        className="flex items-center gap-3 px-4 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors w-full"
+                      >
+                        <LogOut size={16} />
+                        <span>Logout</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="ghost" size="sm">
+                    Login
+                  </Button>
+                </Link>
+                <Link to="/signup">
+                  <Button size="sm" className="bg-primary hover:bg-primary/90">
+                    Sign Up
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -95,18 +194,70 @@ export function Header() {
             <Link to="/quiz" className="block px-3 py-2 rounded-lg hover:bg-muted text-sm">
               Body Type Quiz
             </Link>
-            <div className="flex gap-2 pt-2">
-              <Link to="/login" className="flex-1">
-                <Button variant="ghost" size="sm" className="w-full">
-                  Login
-                </Button>
-              </Link>
-              <Link to="/signup" className="flex-1">
-                <Button size="sm" className="w-full bg-primary hover:bg-primary/90">
-                  Sign Up
-                </Button>
-              </Link>
-            </div>
+            
+            {isAuthenticated ? (
+              <div className="space-y-2 pt-2 border-t border-border mt-2">
+                {/* User Info */}
+                <div className="px-3 py-2 bg-muted rounded-lg">
+                  <p className="text-sm font-semibold">{user?.name || 'User'}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email || ''}</p>
+                </div>
+
+                {/* Menu Items */}
+                <Link 
+                  to={userType === 'doctor' ? '/doctor/dashboard' : '/dashboard'} 
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted text-sm"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <UserCircle size={16} />
+                  Dashboard
+                </Link>
+                
+                <Link 
+                  to={userType === 'doctor' ? '/doctor/dashboard' : '/dashboard/profile'} 
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted text-sm"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <User size={16} />
+                  My Profile
+                </Link>
+
+                {userType !== 'doctor' && (
+                  <Link 
+                    to="/dashboard/appointments" 
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted text-sm"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <Calendar size={16} />
+                    My Appointments
+                  </Link>
+                )}
+
+                <button
+                  onClick={() => {
+                    setIsOpen(false)
+                    logout()
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-destructive/10 text-sm text-destructive font-medium"
+                >
+                  <LogOut size={16} />
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2 pt-2 border-t border-border mt-2">
+                <Link to="/login" className="flex-1" onClick={() => setIsOpen(false)}>
+                  <Button variant="ghost" size="sm" className="w-full">
+                    Login
+                  </Button>
+                </Link>
+                <Link to="/signup" className="flex-1" onClick={() => setIsOpen(false)}>
+                  <Button size="sm" className="w-full bg-primary hover:bg-primary/90">
+                    Sign Up
+                  </Button>
+                </Link>
+              </div>
+            )}
           </nav>
         )}
       </div>

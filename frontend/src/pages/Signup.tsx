@@ -1,17 +1,52 @@
 import { Link, useNavigate } from "react-router-dom"
 import { SignUpForm, type SignUpData } from "@/components/forms/signup-form"
 import { useState } from "react"
+import { authService } from "@/services/auth.service"
+import { doctorService } from "@/services/doctor.service"
+import { useAuth } from "@/contexts/AuthContext"
 
 export default function SignUpPage() {
-  const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
+  const { login: authLogin } = useAuth()
 
-  const handleSubmit = (data: SignUpData) => {
-    console.log("[v0] Signup attempt:", data.email, "as", data.userType)
-    setSubmitted(true)
-    // In production: call auth API here
-    // For now, redirect to dashboard
-    navigate("/dashboard")
+  const handleSubmit = async (data: SignUpData) => {
+    setLoading(true)
+    setError(null)
+    
+    try {
+      // If user selected "doctor", use doctor signup
+      if (data.userType === 'doctor') {
+        const response = await doctorService.signup({
+          name: data.name,
+          email: data.email,
+          password: data.password,
+        })
+        console.log("Doctor signup successful:", response.doctor.name)
+        alert("Doctor account created successfully! Please login to continue.")
+        navigate("/login")
+      } else {
+        // For patient/admin, use regular signup
+        const response = await authService.signup({
+          name: data.name,
+          email: data.email,
+          password: data.password,
+          accountType: data.userType === 'admin' ? 'pro' : (data.userType as 'free' | 'pro')
+        })
+        console.log("Signup successful:", response.user.name)
+        // Store token and redirect to dashboard
+        if (response.token) {
+          authLogin(response.token, data.userType, response.user)
+        }
+        navigate("/dashboard")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Signup failed")
+      console.error("Signup error:", err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -30,7 +65,19 @@ export default function SignUpPage() {
         </div>
 
         {/* Form Card */}
-        <div className="bg-card border border-border/40 rounded-lg p-8">
+        <div className="bg-card border border-border/40 rounded-lg p-8 space-y-6">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+          
+          {loading && (
+            <div className="text-center text-sm text-muted-foreground">
+              Creating your account...
+            </div>
+          )}
+          
           <SignUpForm onSubmit={handleSubmit} />
         </div>
 

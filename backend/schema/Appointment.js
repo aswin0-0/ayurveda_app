@@ -22,6 +22,15 @@ const appointmentSchema = new mongoose.Schema(
     },
     // optional notes from patient when requesting
     notes: { type: String },
+    // Payment related fields
+    razorpay_order_id: { type: String },
+    razorpay_payment_id: { type: String },
+    razorpay_signature: { type: String },
+    payment_status: {
+      type: String,
+      enum: ["pending", "paid", "failed"],
+      default: "pending",
+    },
   },
   { timestamps: true }
 );

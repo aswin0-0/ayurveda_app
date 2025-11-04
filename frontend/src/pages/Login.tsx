@@ -1,17 +1,49 @@
 import { Link, useNavigate } from "react-router-dom"
 import { LoginForm } from "@/components/forms/login-form"
 import { useState } from "react"
+import { authService } from "@/services/auth.service"
+import { doctorService } from "@/services/doctor.service"
+import { adminService } from "@/services/admin.service"
+import { useAuth } from "@/contexts/AuthContext"
 
 export default function LoginPage() {
-  const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
+  const { login: authLogin } = useAuth()
 
-  const handleSubmit = (email: string, password: string) => {
-    console.log("[v0] Login attempt:", email)
-    setSubmitted(true)
-    // In production: call auth API here
-    // For now, redirect to dashboard
-    navigate("/dashboard")
+  const handleSubmit = async (email: string, password: string, userType: "patient" | "doctor" | "admin") => {
+    setLoading(true)
+    setError(null)
+    
+    try {
+      if (userType === 'admin') {
+        // Admin login
+        localStorage.setItem('temp_email', email) // Store email temporarily
+        const response = await adminService.login({ email, password })
+        authLogin(response.token, 'admin')
+        console.log("Admin login successful")
+        navigate("/admin/dashboard")
+      } else if (userType === 'doctor') {
+        // Doctor login
+        localStorage.setItem('temp_email', email) // Store email temporarily
+        const response = await doctorService.login({ email, password })
+        authLogin(response.token, 'doctor')
+        console.log("Doctor login successful")
+        navigate("/doctor/dashboard")
+      } else {
+        // Patient login
+        const response = await authService.login({ email, password })
+        authLogin(response.token, userType, response.user)
+        console.log("Login successful:", response.user.name)
+        navigate("/dashboard")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed")
+      console.error("Login error:", err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -31,6 +63,18 @@ export default function LoginPage() {
 
         {/* Form Card */}
         <div className="bg-card border border-border/40 rounded-lg p-8 space-y-6">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+          
+          {loading && (
+            <div className="text-center text-sm text-muted-foreground">
+              Logging in...
+            </div>
+          )}
+          
           <LoginForm onSubmit={handleSubmit} />
 
           {/* Divider */}

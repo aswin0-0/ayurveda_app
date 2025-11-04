@@ -15,6 +15,7 @@ const cartRouter = require("./routes/cart");
 const productsRouter = require("./routes/products");
 const ordersRouter = require("./routes/orders");
 const doshaRoutes = require("./routes/dosha");
+const paymentRouter = require("./routes/payment");
 const jwt = require("jsonwebtoken");
 
 const app = express();
@@ -24,6 +25,8 @@ app.use(express.json());
 const missing = [];
 if (!process.env.MONGO_URI) missing.push("MONGO_URI");
 if (!process.env.JWT_SECRET) missing.push("JWT_SECRET");
+if (!process.env.RAZORPAY_KEY_ID) missing.push("RAZORPAY_KEY_ID");
+if (!process.env.RAZORPAY_KEY_SECRET) missing.push("RAZORPAY_KEY_SECRET");
 
 if (missing.length) {
   console.error(
@@ -31,7 +34,7 @@ if (missing.length) {
     missing.join(", ")
   );
   console.error(
-    "Create backend/.env with at least:\nMONGO_URI=...\nJWT_SECRET=...\nPORT=5000"
+    "Create backend/.env with at least:\nMONGO_URI=...\nJWT_SECRET=...\nRAZORPAY_KEY_ID=...\nRAZORPAY_KEY_SECRET=...\nPORT=5000"
   );
   process.exit(1);
 }
@@ -100,6 +103,8 @@ mongoose
     
     // mount dosha quiz routes
     app.use("/dosha", doshaRoutes);
+  app.use("/orders", ordersRouter);
+  app.use("/payment", paymentRouter);
 
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })

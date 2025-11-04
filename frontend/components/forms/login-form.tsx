@@ -9,12 +9,13 @@ import { AlertCircle, Eye, EyeOff } from "lucide-react"
 import { Link } from "react-router-dom"
 
 interface LoginFormProps {
-  onSubmit?: (email: string, password: string) => void
+  onSubmit?: (email: string, password: string, userType: "patient" | "doctor" | "admin") => void
 }
 
 export function LoginForm({ onSubmit }: LoginFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [userType, setUserType] = useState<"patient" | "doctor" | "admin">("patient")
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
@@ -48,7 +49,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     if (onSubmit) {
-      onSubmit(email, password)
+      onSubmit(email, password, userType)
     }
 
     setIsLoading(false)
@@ -56,6 +57,27 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 w-full">
+      {/* User Type Selection */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-foreground">I am a</label>
+        <div className="grid grid-cols-3 gap-2">
+          {(["patient", "doctor", "admin"] as const).map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setUserType(type)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition capitalize ${
+                userType === type
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Email Field */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground">Email Address</label>
