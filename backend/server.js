@@ -25,8 +25,10 @@ app.use(express.json());
 const missing = [];
 if (!process.env.MONGO_URI) missing.push("MONGO_URI");
 if (!process.env.JWT_SECRET) missing.push("JWT_SECRET");
-if (!process.env.RAZORPAY_KEY_ID) missing.push("RAZORPAY_KEY_ID");
-if (!process.env.RAZORPAY_KEY_SECRET) missing.push("RAZORPAY_KEY_SECRET");
+// Razorpay is optional - warn but don't block startup
+if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+  console.warn("⚠️  WARNING: Razorpay credentials not configured. Payment features will be disabled.");
+}
 
 if (missing.length) {
   console.error(

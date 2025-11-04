@@ -3,10 +3,12 @@ const crypto = require("crypto");
 
 // Initialize Razorpay instance
 // Make sure to add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in your .env file
-const razorpayInstance = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+const razorpayInstance = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET 
+  ? new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    })
+  : null;
 
 /**
  * Create a Razorpay order
@@ -18,6 +20,9 @@ const razorpayInstance = new Razorpay({
  */
 const createOrder = async (amount, currency = "INR", receipt, notes = {}) => {
   try {
+    if (!razorpayInstance) {
+      throw new Error("Razorpay is not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env");
+    }
     const options = {
       amount: Math.round(amount * 100), // Razorpay expects amount in paise
       currency,
@@ -41,6 +46,10 @@ const createOrder = async (amount, currency = "INR", receipt, notes = {}) => {
  */
 const verifyPaymentSignature = (orderId, paymentId, signature) => {
   try {
+    if (!process.env.RAZORPAY_KEY_SECRET) {
+      console.warn("Razorpay signature verification skipped - RAZORPAY_KEY_SECRET not configured");
+      return false;
+    }
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(`${orderId}|${paymentId}`)
@@ -60,6 +69,9 @@ const verifyPaymentSignature = (orderId, paymentId, signature) => {
  */
 const fetchPayment = async (paymentId) => {
   try {
+    if (!razorpayInstance) {
+      throw new Error("Razorpay is not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env");
+    }
     const payment = await razorpayInstance.payments.fetch(paymentId);
     return payment;
   } catch (error) {

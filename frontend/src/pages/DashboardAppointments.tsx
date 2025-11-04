@@ -1,7 +1,7 @@
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { useState, useEffect } from "react"
 import { appointmentService } from "@/services/appointment.service"
-import type { Appointment, Doctor } from "@/types/api.types"
+import type { Appointment } from "@/types/api.types"
 
 export default function DashboardAppointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([])

@@ -1,13 +1,11 @@
 
 import { Menu, Bell, User } from "lucide-react"
-import { useState } from "react"
 
 interface TopNavProps {
   onMenuClick?: () => void
 }
 
 export function TopNav({ onMenuClick }: TopNavProps) {
-  const [showMenu, setShowMenu] = useState(false)
 
   return (
     <div className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

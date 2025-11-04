@@ -21,6 +21,10 @@ import QuizStart from './pages/QuizStart'
 import Dashboard from './pages/Dashboard'
 import DashboardAppointments from './pages/DashboardAppointments'
 import DashboardProfile from './pages/DashboardProfile'
+import DashboardHealth from './pages/DashboardHealth'
+import Cart from './pages/Cart'
+import Orders from './pages/Orders'
+import OrderDetails from './pages/OrderDetails'
 import DoctorDashboard from './pages/DoctorDashboard'
 import DoctorLogin from './pages/DoctorLogin'
 import DoctorSignup from './pages/DoctorSignup'
@@ -57,6 +61,10 @@ function App() {
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/dashboard/appointments" element={<ProtectedRoute><DashboardAppointments /></ProtectedRoute>} />
           <Route path="/dashboard/profile" element={<ProtectedRoute><DashboardProfile /></ProtectedRoute>} />
+          <Route path="/dashboard/health" element={<ProtectedRoute><DashboardHealth /></ProtectedRoute>} />
+          <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
+          <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+          <Route path="/orders/:orderId" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
           
           {/* Doctor Routes */}
           <Route path="/doctor/login" element={<DoctorLogin />} />

@@ -1,14 +1,46 @@
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { Menu, X, Home, User, LogOut, Calendar, UserCircle } from "lucide-react"
+import { Menu, X, Home, User, LogOut, Calendar, UserCircle, ShoppingCart, Package } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { useAuth } from "@/contexts/AuthContext"
+import { cartService } from "@/services/cart.service"
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [cartCount, setCartCount] = useState(0)
   const profileMenuRef = useRef<HTMLDivElement>(null)
   const { isAuthenticated, userType, user, logout } = useAuth()
+
+  // Fetch cart count when authenticated
+  useEffect(() => {
+    const fetchCartCount = async () => {
+      if (isAuthenticated) {
+        try {
+          const cart = await cartService.getCart()
+          const count = cart.reduce((sum, item) => sum + item.quantity, 0)
+          setCartCount(count)
+        } catch (err) {
+          console.error('Failed to fetch cart:', err)
+        }
+      } else {
+        setCartCount(0)
+      }
+    }
+
+    fetchCartCount()
+    
+    // Listen for cart updates
+    const handleCartUpdate = () => fetchCartCount()
+    window.addEventListener('cartUpdated', handleCartUpdate)
+    
+    // Refresh cart count every 30 seconds
+    const interval = setInterval(fetchCartCount, 30000)
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate)
+      clearInterval(interval)
+    }
+  }, [isAuthenticated])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -70,6 +102,16 @@ export function Header() {
 
           {/* CTA Buttons */}
           <div className="hidden sm:flex items-center gap-3">
+            {isAuthenticated && (
+              <Link to="/cart" className="relative p-2 rounded-lg hover:bg-muted transition-colors">
+                <ShoppingCart size={20} className="text-muted-foreground" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartCount > 9 ? '9+' : cartCount}
+                  </span>
+                )}
+              </Link>
+            )}
             {isAuthenticated ? (
               <div className="relative" ref={profileMenuRef}>
                 <button
@@ -120,14 +162,24 @@ export function Header() {
                       </Link>
 
                       {userType !== 'doctor' && (
-                        <Link
-                          to="/dashboard/appointments"
-                          onClick={() => setShowProfileMenu(false)}
-                          className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted transition-colors"
-                        >
-                          <Calendar size={16} />
-                          <span>My Appointments</span>
-                        </Link>
+                        <>
+                          <Link
+                            to="/dashboard/appointments"
+                            onClick={() => setShowProfileMenu(false)}
+                            className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted transition-colors"
+                          >
+                            <Calendar size={16} />
+                            <span>My Appointments</span>
+                          </Link>
+                          <Link
+                            to="/orders"
+                            onClick={() => setShowProfileMenu(false)}
+                            className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted transition-colors"
+                          >
+                            <Package size={16} />
+                            <span>My Orders</span>
+                          </Link>
+                        </>
                       )}
                     </div>
 
@@ -195,6 +247,24 @@ export function Header() {
               Body Type Quiz
             </Link>
             
+            {isAuthenticated && (
+              <Link 
+                to="/cart" 
+                className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-muted text-sm"
+                onClick={() => setIsOpen(false)}
+              >
+                <div className="flex items-center gap-2">
+                  <ShoppingCart size={16} />
+                  Cart
+                </div>
+                {cartCount > 0 && (
+                  <span className="bg-primary text-primary-foreground text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartCount > 9 ? '9+' : cartCount}
+                  </span>
+                )}
+              </Link>
+            )}
+            
             {isAuthenticated ? (
               <div className="space-y-2 pt-2 border-t border-border mt-2">
                 {/* User Info */}
@@ -223,14 +293,24 @@ export function Header() {
                 </Link>
 
                 {userType !== 'doctor' && (
-                  <Link 
-                    to="/dashboard/appointments" 
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted text-sm"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <Calendar size={16} />
-                    My Appointments
-                  </Link>
+                  <>
+                    <Link 
+                      to="/dashboard/appointments" 
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted text-sm"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <Calendar size={16} />
+                      My Appointments
+                    </Link>
+                    <Link 
+                      to="/orders" 
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted text-sm"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <Package size={16} />
+                      My Orders
+                    </Link>
+                  </>
                 )}
 
                 <button

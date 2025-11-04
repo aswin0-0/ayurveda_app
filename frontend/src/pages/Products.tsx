@@ -39,9 +39,18 @@ export default function Products() {
     setAddingToCart(productId)
     try {
       await cartService.addToCart({ productId, quantity: 1 })
-      alert("Product added to cart!")
+      // Show success message
+      const productName = products.find(p => p._id === productId)?.name || 'Product'
+      setError(null)
+      // Use a temporary success state
+      const successMsg = `✓ ${productName} added to cart!`
+      setError(successMsg)
+      setTimeout(() => setError(null), 3000)
+      
+      // Trigger cart refresh in header by dispatching custom event
+      window.dispatchEvent(new Event('cartUpdated'))
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to add to cart")
+      setError(err instanceof Error ? err.message : "Failed to add to cart")
     } finally {
       setAddingToCart(null)
     }
@@ -65,7 +74,7 @@ export default function Products() {
           )}
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
+            <div className={`${error.startsWith('✓') ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'} border px-4 py-3 rounded-lg text-sm`}>
               {error}
             </div>
           )}
