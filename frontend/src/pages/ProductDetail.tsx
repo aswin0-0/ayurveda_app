@@ -53,17 +53,41 @@ export default function ProductDetail() {
     comment: ''
   })
   const [submittingReview, setSubmittingReview] = useState(false)
+  const [showImageModal, setShowImageModal] = useState(false)
+  const [modalImageIndex, setModalImageIndex] = useState(0)
 
   useEffect(() => {
     fetchProductDetail()
     fetchReviews()
   }, [id])
 
+  // Keyboard navigation for modal
+  useEffect(() => {
+    if (!showImageModal || !product) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const imgList = product.images && product.images.length > 0 ? product.images : (product.image ? [product.image] : [])
+      if (e.key === 'Escape') {
+        setShowImageModal(false)
+      } else if (e.key === 'ArrowLeft') {
+        setModalImageIndex((prev) => (prev - 1 + imgList.length) % imgList.length)
+      } else if (e.key === 'ArrowRight') {
+        setModalImageIndex((prev) => (prev + 1) % imgList.length)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showImageModal, product])
+
   const fetchProductDetail = async () => {
     try {
       const response = await fetch(`http://localhost:5000/products/${id}`)
       if (!response.ok) throw new Error('Failed to fetch product')
       const data = await response.json()
+      console.log('Product loaded:', data.product)
+      console.log('Main image:', data.product.image)
+      console.log('Images array:', data.product.images)
       setProduct(data.product)
       setError(null)
     } catch (err) {
@@ -171,8 +195,8 @@ export default function ProductDetail() {
     )
   }
 
-  const images = product.images && product.images.length > 0 ? product.images : [product.image]
-  const currentImage = images[currentImageIndex]
+  const images = product.images && product.images.length > 0 ? product.images : (product.image ? [product.image] : [])
+  const currentImage = images.length > 0 ? images[currentImageIndex] : null
 
   return (
     <PageLayout>
@@ -189,13 +213,30 @@ export default function ProductDetail() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             {/* Image Gallery */}
             <div className="space-y-4">
-              <div className="relative bg-muted rounded-lg overflow-hidden aspect-square">
+              <div 
+                className="relative bg-muted rounded-lg overflow-hidden aspect-square cursor-pointer group"
+                onClick={() => {
+                  setModalImageIndex(currentImageIndex)
+                  setShowImageModal(true)
+                }}
+              >
                 {currentImage ? (
-                  <img
-                    src={currentImage.startsWith('http') ? currentImage : `${API_CONFIG.BASE_URL}${currentImage}`}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                  />
+                  <>
+                    <img
+                      src={currentImage.startsWith('http') ? currentImage : `${API_CONFIG.BASE_URL}${currentImage}`}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:opacity-75 transition-opacity"
+                      onError={(e) => console.error('Image failed to load:', (e.target as HTMLImageElement).src)}
+                      onLoad={() => console.log('Image loaded:', currentImage)}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                      <div className="bg-white/90 p-3 rounded-full">
+                        <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-6xl">🌿</div>
                 )}
@@ -217,6 +258,7 @@ export default function ProductDetail() {
                         src={img.startsWith('http') ? img : `${API_CONFIG.BASE_URL}${img}`}
                         alt="thumbnail"
                         className="w-full h-full object-cover"
+                        onError={(e) => console.error('Thumbnail failed to load:', (e.target as HTMLImageElement).src)}
                       />
                     </button>
                     )
@@ -495,6 +537,100 @@ export default function ProductDetail() {
           </div>
         </div>
       </div>
+
+      {/* Image Modal */}
+      {showImageModal && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={() => setShowImageModal(false)}>
+          {/* Close button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowImageModal(false)
+            }}
+            className="absolute top-4 right-4 text-white p-2 hover:bg-white/20 rounded-lg transition-colors z-50 cursor-pointer"
+            title="Close image"
+          >
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Main image */}
+          <div className="relative w-full h-full flex items-center justify-center p-8" onClick={(e) => e.stopPropagation()}>
+            {images[modalImageIndex] ? (
+              <img
+                src={images[modalImageIndex].startsWith('http') ? images[modalImageIndex] : `${API_CONFIG.BASE_URL}${images[modalImageIndex]}`}
+                alt={`${product?.name} - Image ${modalImageIndex + 1}`}
+                className="max-w-full max-h-full object-contain"
+                onError={(e) => console.error('Modal image failed to load:', (e.target as HTMLImageElement).src)}
+              />
+            ) : (
+              <div className="text-6xl">🌿</div>
+            )}
+
+            {/* Left arrow */}
+            {images.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setModalImageIndex((prev) => (prev - 1 + images.length) % images.length)
+                }}
+                className="absolute left-4 text-white p-3 rounded-full bg-white/20 hover:bg-white/40 transition-colors hover:scale-110 transform z-50"
+              >
+                <ChevronLeft size={28} />
+              </button>
+            )}
+
+            {/* Right arrow */}
+            {images.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setModalImageIndex((prev) => (prev + 1) % images.length)
+                }}
+                className="absolute right-4 text-white p-3 rounded-full bg-white/20 hover:bg-white/40 transition-colors hover:scale-110 transform z-50"
+              >
+                <ChevronRight size={28} />
+              </button>
+            )}
+
+            {/* Image counter */}
+            {images.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-full text-sm font-medium">
+                {modalImageIndex + 1} / {images.length}
+              </div>
+            )}
+          </div>
+
+          {/* Image thumbnails at bottom */}
+          {images.length > 1 && (
+            <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 flex gap-2 px-4 z-50">
+              {images.map((img, idx) => (
+                img && (
+                  <button
+                    key={idx}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setModalImageIndex(idx)
+                    }}
+                    className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                      idx === modalImageIndex
+                        ? 'border-primary scale-110'
+                        : 'border-white/30 hover:border-white/60 opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <img
+                      src={img.startsWith('http') ? img : `${API_CONFIG.BASE_URL}${img}`}
+                      alt={`Thumbnail ${idx}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                )
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </PageLayout>
   )
 }

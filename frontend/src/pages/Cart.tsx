@@ -18,6 +18,17 @@ export default function Cart() {
   const fetchCart = async () => {
     try {
       const data = await cartService.getCart()
+      console.log('Cart data received:', data)
+      data.forEach((item: any, idx: number) => {
+        const product = item.product as any
+        if (product) {
+          console.log(`Cart item ${idx}:`, {
+            name: product.name,
+            image: product.image,
+            quantity: item.quantity
+          })
+        }
+      })
       setCart(data)
       setError(null)
     } catch (err) {
@@ -176,15 +187,27 @@ export default function Cart() {
                   if (!product) return null
 
                   return (
-                    <div key={product._id} className="bg-card border border-border rounded-lg p-6">
+                    <div 
+                      key={product._id} 
+                      className="bg-card border border-border rounded-lg p-6 cursor-pointer group hover:shadow-lg transition-shadow"
+                      onClick={() => navigate(`/products/${product._id}`)}
+                    >
                       <div className="flex gap-4">
                         {/* Product Image */}
-                        <div className="w-24 h-24 flex-shrink-0 bg-muted rounded-md flex items-center justify-center overflow-hidden">
+                        <div className="w-24 h-24 flex-shrink-0 bg-muted rounded-md flex items-center justify-center overflow-hidden group-hover:opacity-75 transition-opacity">
                           {product.image ? (
                             <img
                               src={product.image.startsWith('http') ? product.image : `${API_CONFIG.BASE_URL}${product.image}`}
                               alt={product.name}
                               className="w-full h-full object-cover"
+                              onError={() => {
+                                console.error('Cart image failed to load:', {
+                                  productName: product.name,
+                                  attemptedUrl: product.image && product.image.startsWith('http') ? product.image : `${API_CONFIG.BASE_URL}${product.image}`,
+                                  rawImage: product.image
+                                })
+                              }}
+                              onLoad={() => console.log('Cart image loaded:', product.name)}
                             />
                           ) : (
                             <span className="text-3xl">🌿</span>
@@ -193,7 +216,7 @@ export default function Cart() {
 
                         {/* Product Details */}
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-foreground text-lg">{product.name}</h3>
+                          <h3 className="font-semibold text-foreground text-lg group-hover:text-primary transition-colors">{product.name}</h3>
                           <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
                             {product.description || "Ayurvedic product"}
                           </p>
@@ -201,7 +224,7 @@ export default function Cart() {
                             <span className="text-xl font-bold text-primary">₹{product.price}</span>
                             
                             {/* Quantity Controls */}
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                               <button
                                 onClick={() => handleUpdateQuantity(product._id, item.quantity - 1)}
                                 disabled={updating === product._id || item.quantity <= 1}
@@ -221,7 +244,10 @@ export default function Cart() {
 
                             {/* Remove Button */}
                             <button
-                              onClick={() => handleRemoveItem(product._id)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRemoveItem(product._id)
+                              }}
                               disabled={updating === product._id}
                               className="ml-auto text-destructive hover:text-destructive/80 transition disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Remove from cart"

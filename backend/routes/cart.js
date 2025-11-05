@@ -34,7 +34,61 @@ router.post("/add", requireAuth, async (req, res) => {
     }
     await user.save();
     const populated = await User.findById(userId).populate("cart.product");
-    res.json({ cart: populated.cart });
+    
+    // Generate presigned URLs for Backblaze images
+    const { getPresignedUrl } = require('../config/backblaze');
+    const bucket = process.env.B2_BUCKET;
+    
+    const cart = populated.cart || [];
+    const cartOut = [];
+    
+    for (const item of cart) {
+      const cartItem = { ...item.toObject ? item.toObject() : item };
+      const prod = cartItem.product;
+      
+      if (prod) {
+        const prodObj = prod.toObject ? prod.toObject() : prod;
+        
+        // Process main image
+        if (prodObj.image && /^https?:\/\//i.test(prodObj.image) && bucket && prodObj.image.includes(bucket)) {
+          try {
+            const parsed = new URL(prodObj.image);
+            const key = parsed.pathname.replace(/^\//, '');
+            const presigned = await getPresignedUrl(key, 300);
+            prodObj.image = presigned;
+          } catch (e) {
+            console.warn('Could not create presigned url for main image', prodObj.image, e && e.message ? e.message : e);
+          }
+        }
+        
+        // Process images array
+        if (prodObj.images && Array.isArray(prodObj.images)) {
+          const presignedImages = [];
+          for (const img of prodObj.images) {
+            if (img && /^https?:\/\//i.test(img) && bucket && img.includes(bucket)) {
+              try {
+                const parsed = new URL(img);
+                const key = parsed.pathname.replace(/^\//, '');
+                const presigned = await getPresignedUrl(key, 300);
+                presignedImages.push(presigned);
+              } catch (e) {
+                console.warn('Could not create presigned url for image', img, e && e.message ? e.message : e);
+                presignedImages.push(img);
+              }
+            } else {
+              presignedImages.push(img);
+            }
+          }
+          prodObj.images = presignedImages;
+        }
+        
+        cartItem.product = prodObj;
+      }
+      
+      cartOut.push(cartItem);
+    }
+    
+    res.json({ cart: cartOut });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -46,7 +100,61 @@ router.get("/", requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate("cart.product");
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.json({ cart: user.cart || [] });
+    
+    // Generate presigned URLs for Backblaze images
+    const { getPresignedUrl } = require('../config/backblaze');
+    const bucket = process.env.B2_BUCKET;
+    
+    const cart = user.cart || [];
+    const cartOut = [];
+    
+    for (const item of cart) {
+      const cartItem = { ...item.toObject ? item.toObject() : item };
+      const product = cartItem.product;
+      
+      if (product) {
+        const prodObj = product.toObject ? product.toObject() : product;
+        
+        // Process main image
+        if (prodObj.image && /^https?:\/\//i.test(prodObj.image) && bucket && prodObj.image.includes(bucket)) {
+          try {
+            const parsed = new URL(prodObj.image);
+            const key = parsed.pathname.replace(/^\//, '');
+            const presigned = await getPresignedUrl(key, 300);
+            prodObj.image = presigned;
+          } catch (e) {
+            console.warn('Could not create presigned url for main image', prodObj.image, e && e.message ? e.message : e);
+          }
+        }
+        
+        // Process images array
+        if (prodObj.images && Array.isArray(prodObj.images)) {
+          const presignedImages = [];
+          for (const img of prodObj.images) {
+            if (img && /^https?:\/\//i.test(img) && bucket && img.includes(bucket)) {
+              try {
+                const parsed = new URL(img);
+                const key = parsed.pathname.replace(/^\//, '');
+                const presigned = await getPresignedUrl(key, 300);
+                presignedImages.push(presigned);
+              } catch (e) {
+                console.warn('Could not create presigned url for image', img, e && e.message ? e.message : e);
+                presignedImages.push(img);
+              }
+            } else {
+              presignedImages.push(img);
+            }
+          }
+          prodObj.images = presignedImages;
+        }
+        
+        cartItem.product = prodObj;
+      }
+      
+      cartOut.push(cartItem);
+    }
+    
+    res.json({ cart: cartOut });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });

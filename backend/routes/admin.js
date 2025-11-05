@@ -235,12 +235,13 @@ router.get("/products", requireAdmin, async (req, res) => {
     
     // If images are Backblaze URLs and bucket is private, return presigned URLs
     const { getPresignedUrl } = require('../config/backblaze');
-    const b2Host = (process.env.B2_S3_ENDPOINT || '').replace(/^https?:\/\//, '');
     const bucket = process.env.B2_BUCKET;
 
     const productsOut = [];
     for (const p of products) {
       const obj = p.toObject();
+      
+      // Process main image
       if (obj.image && /^https?:\/\//i.test(obj.image) && bucket && obj.image.includes(bucket)) {
         try {
           // extract key from URL path
@@ -249,9 +250,31 @@ router.get("/products", requireAdmin, async (req, res) => {
           const presigned = await getPresignedUrl(key, 300);
           obj.image = presigned;
         } catch (e) {
-          console.warn('Could not create presigned url for', obj.image, e && e.message ? e.message : e);
+          console.warn('Could not create presigned url for main image', obj.image, e && e.message ? e.message : e);
         }
       }
+      
+      // Process images array
+      if (obj.images && Array.isArray(obj.images)) {
+        const presignedImages = [];
+        for (const img of obj.images) {
+          if (img && /^https?:\/\//i.test(img) && bucket && img.includes(bucket)) {
+            try {
+              const parsed = new URL(img);
+              const key = parsed.pathname.replace(/^\//, '');
+              const presigned = await getPresignedUrl(key, 300);
+              presignedImages.push(presigned);
+            } catch (e) {
+              console.warn('Could not create presigned url for image', img, e && e.message ? e.message : e);
+              presignedImages.push(img);
+            }
+          } else {
+            presignedImages.push(img);
+          }
+        }
+        obj.images = presignedImages;
+      }
+      
       productsOut.push(obj);
     }
     
