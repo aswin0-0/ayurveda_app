@@ -20,7 +20,6 @@ router.post("/add", requireAuth, async (req, res) => {
 
     user.cart = user.cart || [];
     const existing = user.cart.find((c) => String(c.product) === String(productId));
-<<<<<<< HEAD
     
     // If quantity is 0, remove the item
     if (quantity === 0) {
@@ -31,19 +30,6 @@ router.post("/add", requireAuth, async (req, res) => {
     } else {
       // Add new item
       user.cart.push({ product: productId, quantity: quantity || 1 });
-=======
-    if (existing) {
-      existing.quantity = (existing.quantity || 0) + (quantity || 1);
-      // Remove item if quantity becomes 0 or less
-      if (existing.quantity <= 0) {
-        user.cart = user.cart.filter((c) => String(c.product) !== String(productId));
-      }
-    } else {
-      // Only add if quantity is positive
-      if ((quantity || 1) > 0) {
-        user.cart.push({ product: productId, quantity: quantity || 1 });
-      }
->>>>>>> da77f9ce478641b245f7316c87122d4f16614301
     }
     
     await user.save();
@@ -115,13 +101,6 @@ router.get("/", requireAuth, async (req, res) => {
     const user = await User.findById(req.user.id).populate("cart.product");
     if (!user) return res.status(404).json({ message: "User not found" });
     
-<<<<<<< HEAD
-    // Log cart details for debugging
-    console.log("Cart request for user:", req.user.id);
-    console.log("Cart items:", user.cart?.length || 0);
-    
-    res.json({ cart: user.cart || [] });
-=======
     // Generate presigned URLs for Backblaze images
     const { getPresignedUrl } = require('../config/backblaze');
     const bucket = process.env.B2_BUCKET;
@@ -176,7 +155,6 @@ router.get("/", requireAuth, async (req, res) => {
     }
     
     res.json({ cart: cartOut });
->>>>>>> da77f9ce478641b245f7316c87122d4f16614301
   } catch (err) {
     console.error("Get cart error:", err);
     res.status(500).json({ message: "Server error", error: err.message });

@@ -75,12 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = (token: string, type: 'patient' | 'doctor' | 'admin', userData?: User) => {
-<<<<<<< HEAD
     console.log('AuthContext login called:', { type, userData })
-=======
-    console.log("AuthContext.login called with:", { type, hasUserData: !!userData })
-    
->>>>>>> da77f9ce478641b245f7316c87122d4f16614301
     localStorage.setItem(API_CONFIG.TOKEN_KEY, token)
     localStorage.setItem('user_type', type)
     
@@ -92,24 +87,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("User set:", userData)
     } else if (type === 'admin' || type === 'doctor') {
       // For admin/doctor, create a minimal user object so isAuthenticated becomes true
-<<<<<<< HEAD
       const minimalUser = {
-=======
-      const tempUser = {
->>>>>>> da77f9ce478641b245f7316c87122d4f16614301
         id: token.substring(0, 10), // Use part of token as temp ID
         name: type.charAt(0).toUpperCase() + type.slice(1),
         email: localStorage.getItem('temp_email') || '',
         phone: '',
-<<<<<<< HEAD
       } as any // Use any to bypass type checking for admin/doctor
       console.log('Setting minimal user:', minimalUser)
       setUser(minimalUser)
-=======
-      } as any
-      setUser(tempUser)
-      console.log("Temp user set for", type, ":", tempUser)
->>>>>>> da77f9ce478641b245f7316c87122d4f16614301
     }
     
     console.log("Login complete. isAuthenticated should be true")

@@ -33,7 +33,6 @@ export default function DoctorLogin() {
         password: formData.password,
       })
       
-<<<<<<< HEAD
       console.log("Doctor login response:", response)
       
       // Store temp email for AuthContext
@@ -58,15 +57,6 @@ export default function DoctorLogin() {
       setTimeout(() => {
         navigate("/doctor/dashboard")
       }, 100)
-=======
-      // Store the token
-      localStorage.setItem(API_CONFIG.TOKEN_KEY, response.token)
-      localStorage.setItem('user_type', 'doctor')
-      localStorage.setItem('temp_email', formData.email)
-      
-      console.log("Doctor login successful")
-      navigate("/")
->>>>>>> da77f9ce478641b245f7316c87122d4f16614301
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
       console.error("Doctor login error:", err)

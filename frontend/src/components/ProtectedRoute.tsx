@@ -32,12 +32,7 @@ export function ProtectedRoute({ children, requiredUserType }: ProtectedRoutePro
   }
 
   if (requiredUserType && userType !== requiredUserType) {
-<<<<<<< HEAD
-    // Redirect to appropriate dashboard
-    console.log('Wrong user type, redirecting')
-=======
     // Redirect to appropriate dashboard for non-admin users
->>>>>>> da77f9ce478641b245f7316c87122d4f16614301
     const redirectPath = userType === 'doctor' ? '/doctor/dashboard' : '/dashboard'
     return <Navigate to={redirectPath} replace />
   }
