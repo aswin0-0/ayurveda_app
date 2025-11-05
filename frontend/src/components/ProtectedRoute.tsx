@@ -7,7 +7,9 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredUserType }: ProtectedRouteProps) {
-  const { isAuthenticated, userType, isLoading } = useAuth()
+  const { isAuthenticated, userType, isLoading, user } = useAuth()
+
+  console.log('ProtectedRoute check:', { isAuthenticated, userType, isLoading, requiredUserType, user })
 
   if (isLoading) {
     return (
@@ -21,14 +23,17 @@ export function ProtectedRoute({ children, requiredUserType }: ProtectedRoutePro
   }
 
   if (!isAuthenticated) {
+    console.log('Not authenticated, redirecting to login')
     return <Navigate to="/login" replace />
   }
 
   if (requiredUserType && userType !== requiredUserType) {
     // Redirect to appropriate dashboard
+    console.log('Wrong user type, redirecting')
     const redirectPath = userType === 'doctor' ? '/doctor/dashboard' : '/dashboard'
     return <Navigate to={redirectPath} replace />
   }
 
+  console.log('Access granted to protected route')
   return <>{children}</>
 }

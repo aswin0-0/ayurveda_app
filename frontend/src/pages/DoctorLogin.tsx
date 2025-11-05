@@ -1,11 +1,12 @@
 import { Link, useNavigate } from "react-router-dom"
 import { useState } from "react"
 import { doctorService } from "@/services/doctor.service"
-import { API_CONFIG } from "@/config/api.config"
+import { useAuth } from "@/contexts/AuthContext"
 
 export default function DoctorLogin() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { login } = useAuth()
   const navigate = useNavigate()
 
   const [formData, setFormData] = useState({
@@ -27,16 +28,35 @@ export default function DoctorLogin() {
     setError(null)
 
     try {
-      const response = await doctorService.login({
+      const response: any = await doctorService.login({
         email: formData.email,
         password: formData.password,
       })
       
-      // Store the token
-      localStorage.setItem(API_CONFIG.TOKEN_KEY, response.token)
+      console.log("Doctor login response:", response)
+      
+      // Store temp email for AuthContext
+      localStorage.setItem('temp_email', formData.email)
+      
+      // Backend returns { token, doctor }, convert doctor to user format
+      const doctorUser = response.doctor ? {
+        id: response.doctor.id || response.doctor._id,
+        name: response.doctor.name,
+        email: response.doctor.email,
+        phone: response.doctor.phone || '',
+      } : undefined
+      
+      console.log("Doctor user object:", doctorUser)
+      
+      // Update AuthContext with login
+      login(response.token, 'doctor', doctorUser)
       
       console.log("Doctor login successful")
-      navigate("/doctor/dashboard")
+      
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        navigate("/doctor/dashboard")
+      }, 100)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
       console.error("Doctor login error:", err)

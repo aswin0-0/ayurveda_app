@@ -66,7 +66,14 @@ apiClient.interceptors.response.use(
 export const handleApiError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ErrorResponse>
-    return axiosError.response?.data?.message || axiosError.message || 'An error occurred'
+    const message = axiosError.response?.data?.message || axiosError.message || 'An error occurred'
+    const errorDetails = axiosError.response?.data?.error
+    
+    // Include error details if available
+    if (errorDetails) {
+      return `${message}: ${errorDetails}`
+    }
+    return message
   }
   return 'An unexpected error occurred'
 }

@@ -2,9 +2,13 @@ import { PageLayout } from "@/components/layout/page-layout"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
 import { cartService } from "@/services/cart.service"
+import { paymentService } from "@/services/payment.service"
 import { useNavigate } from "react-router-dom"
 import type { CartItem, Product } from "@/types/api.types"
 import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react"
+import { initializeRazorpay, createProductPaymentOptions } from "../lib/razorpay"
+import type { RazorpayResponse } from "../lib/razorpay"
+import { useAuth } from "@/contexts/AuthContext"
 
 export default function Cart() {
   const [cart, setCart] = useState<CartItem[]>([])
@@ -13,6 +17,7 @@ export default function Cart() {
   const [updating, setUpdating] = useState<string | null>(null)
   const [checkingOut, setCheckingOut] = useState(false)
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const fetchCart = async () => {
     try {
@@ -62,22 +67,75 @@ export default function Cart() {
 
   const handleCheckout = async () => {
     setCheckingOut(true)
+    setError(null) // Clear previous errors
     try {
-      // For now, just navigate to a checkout page (you can implement full checkout flow)
+      console.log("Step 1: Creating order...")
+      // Step 1: Create order in backend
       const order = await cartService.checkout({
         address: "Default address",
         phone: "1234567890"
       })
+      console.log("Order created:", order._id)
       
-      // Clear cart and show success
-      await fetchCart()
-      window.dispatchEvent(new Event('cartUpdated'))
-      alert(`Order placed successfully! Order ID: ${order._id}`)
-      navigate('/dashboard')
+      console.log("Step 2: Creating Razorpay order...")
+      // Step 2: Create Razorpay order
+      const razorpayOrder = await paymentService.createProductOrder(order._id)
+      console.log("Razorpay order created:", razorpayOrder.order.id)
+      
+      // Step 3: Initialize Razorpay checkout
+      const paymentOptions = createProductPaymentOptions(
+        order._id,
+        {
+          razorpayOrderId: razorpayOrder.order.id,
+          amount: razorpayOrder.amount,
+          currency: razorpayOrder.currency,
+          keyId: razorpayOrder.key_id,
+        },
+        {
+          name: user?.name,
+          email: user?.email,
+          phone: "1234567890",
+        },
+        async (response: RazorpayResponse) => {
+          // Step 4: Verify payment on backend
+          try {
+            await paymentService.verifyProductPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              orderId: order._id,
+            })
+            
+            // Clear cart and show success
+            await fetchCart()
+            window.dispatchEvent(new Event('cartUpdated'))
+            alert(`Payment successful! Order ID: ${order._id}`)
+            navigate('/orders')
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Payment verification failed")
+          } finally {
+            setCheckingOut(false)
+          }
+        },
+        () => {
+          // Payment cancelled
+          setCheckingOut(false)
+          setError("Payment cancelled")
+        }
+      )
+      
+      console.log("Step 3: Opening Razorpay checkout...")
+      await initializeRazorpay(paymentOptions)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Checkout failed")
-    } finally {
+      console.error("Checkout error:", err)
+      const errorMessage = err instanceof Error ? err.message : "Checkout failed"
+      setError(errorMessage)
       setCheckingOut(false)
+      
+      // Show user-friendly error
+      if (errorMessage.includes("500")) {
+        alert("Server error. Please check if all products in your cart are valid and try again.")
+      }
     }
   }
 
@@ -119,8 +177,15 @@ export default function Cart() {
           )}
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
-              {error}
+            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm space-y-2">
+              <p className="font-semibold">Error:</p>
+              <p>{error}</p>
+              <button 
+                onClick={() => setError(null)} 
+                className="text-xs underline hover:no-underline"
+              >
+                Dismiss
+              </button>
             </div>
           )}
 

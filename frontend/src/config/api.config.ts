@@ -14,6 +14,7 @@ export const API_ENDPOINTS = {
   DOCTORS: '/doctors',
   DOCTORS_SIGNUP: '/doctors/signup',
   DOCTORS_LOGIN: '/doctors/login',
+  DOCTORS_STATS: '/doctors/stats/homepage',
   
   // Admin
   ADMIN_LOGIN: '/admin/login',

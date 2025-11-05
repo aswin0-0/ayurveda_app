@@ -6,7 +6,7 @@ const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
-// add item to cart
+// add/update item in cart
 router.post("/add", requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -20,17 +20,24 @@ router.post("/add", requireAuth, async (req, res) => {
 
     user.cart = user.cart || [];
     const existing = user.cart.find((c) => String(c.product) === String(productId));
-    if (existing) {
-      existing.quantity = (existing.quantity || 0) + (quantity || 1);
+    
+    // If quantity is 0, remove the item
+    if (quantity === 0) {
+      user.cart = user.cart.filter((c) => String(c.product) !== String(productId));
+    } else if (existing) {
+      // Set quantity directly (not add to it)
+      existing.quantity = quantity || 1;
     } else {
+      // Add new item
       user.cart.push({ product: productId, quantity: quantity || 1 });
     }
+    
     await user.save();
     const populated = await User.findById(userId).populate("cart.product");
     res.json({ cart: populated.cart });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Cart add error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
@@ -39,10 +46,15 @@ router.get("/", requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate("cart.product");
     if (!user) return res.status(404).json({ message: "User not found" });
+    
+    // Log cart details for debugging
+    console.log("Cart request for user:", req.user.id);
+    console.log("Cart items:", user.cart?.length || 0);
+    
     res.json({ cart: user.cart || [] });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Get cart error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
@@ -62,13 +74,20 @@ router.post("/checkout", requireAuth, async (req, res) => {
 
     // build items and compute total
     let total = 0;
-    const items = cart.map((c) => {
-      const p = c.product;
-      const qty = c.quantity || 1;
-      const price = p.price || 0;
-      total += price * qty;
-      return { product: p._id, name: p.name, price, quantity: qty };
-    });
+    const items = cart
+      .filter((c) => c.product) // Filter out null/deleted products
+      .map((c) => {
+        const p = c.product;
+        const qty = c.quantity || 1;
+        const price = p.price || 0;
+        total += price * qty;
+        return { product: p._id, name: p.name, price, quantity: qty };
+      });
+
+    // Check if any valid items remain after filtering
+    if (!items.length) {
+      return res.status(400).json({ message: "Cart has no valid items" });
+    }
 
     const order = new Order({ 
       user: user._id, 
@@ -84,8 +103,9 @@ router.post("/checkout", requireAuth, async (req, res) => {
     user.orders = user.orders || [];
     user.orders.push(order._id);
 
-    // clear user's cart
-    user.cart = [];
+    // DON'T clear cart yet - wait for successful payment
+    // Cart will be cleared after payment verification succeeds
+    
     // optionally update user's stored address/phone if provided in body
     if (req.body.address) user.address = req.body.address;
     if (req.body.phone) user.phone = req.body.phone;
@@ -97,8 +117,11 @@ router.post("/checkout", requireAuth, async (req, res) => {
       message: "Order created. Please complete payment to confirm.",
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Checkout error:", err);
+    res.status(500).json({ 
+      message: "Server error during checkout", 
+      error: err.message 
+    });
   }
 });
 

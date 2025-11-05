@@ -46,8 +46,8 @@ router.post("/create-order/appointment", requireAuth, async (req, res) => {
         .json({ message: "Invalid appointment fee amount" });
     }
 
-    // Create Razorpay order
-    const receipt = `appt_${appointmentId}_${Date.now()}`;
+    // Create Razorpay order (receipt max 40 chars)
+    const receipt = `apt${Date.now()}`;
     const notes = {
       appointmentId: String(appointmentId),
       patientId: String(appointment.patient),
@@ -105,8 +105,8 @@ router.post("/create-order/product", requireAuth, async (req, res) => {
       return res.status(400).json({ message: "Invalid order amount" });
     }
 
-    // Create Razorpay order
-    const receipt = `order_${orderId}_${Date.now()}`;
+    // Create Razorpay order (receipt max 40 chars)
+    const receipt = `ord${Date.now()}`;
     const notes = {
       orderId: String(orderId),
       userId: String(order.user),
@@ -150,8 +150,8 @@ router.post("/create-order/upgrade", requireAuth, async (req, res) => {
   // Define pro tier pricing (₹200 per month)
   const PRO_TIER_PRICE = 200; // ₹200 per month, amount is rupees
 
-    // Create Razorpay order
-    const receipt = `upgrade_${user._id}_${Date.now()}`;
+    // Create Razorpay order (receipt max 40 chars)
+    const receipt = `upg${Date.now()}`;
     const notes = {
       userId: String(user._id),
       type: "tier_upgrade",
@@ -284,6 +284,19 @@ router.post("/verify/product", requireAuth, async (req, res) => {
     order.razorpay_signature = razorpay_signature;
     order.payment_status = "paid";
     await order.save();
+
+    // Clear user's cart only after successful payment
+    try {
+      const user = await User.findById(req.user.id);
+      if (user) {
+        user.cart = [];
+        await user.save();
+        console.log("Cart cleared successfully for user:", req.user.id);
+      }
+    } catch (cartError) {
+      console.error("Error clearing cart:", cartError);
+      // Don't fail the payment verification if cart clearing fails
+    }
 
     res.json({
       success: true,
