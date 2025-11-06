@@ -4,7 +4,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "build": "echo \"No build step — backend is plain Node.js; use npm start for production\""
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.512.0",
