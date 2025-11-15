@@ -14,6 +14,11 @@ const router = express.Router();
 // Create Razorpay order for appointment booking
 router.post("/create-order/appointment", requireAuth, async (req, res) => {
   try {
+    // Ensure Razorpay credentials are configured
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.error('Razorpay not configured: missing RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET')
+      return res.status(500).json({ message: 'Razorpay is not configured on the server' })
+    }
     const { appointmentId } = req.body;
 
     if (!appointmentId) {
@@ -78,6 +83,11 @@ router.post("/create-order/appointment", requireAuth, async (req, res) => {
 // Create Razorpay order for product order
 router.post("/create-order/product", requireAuth, async (req, res) => {
   try {
+    // Ensure Razorpay credentials are configured
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.error('Razorpay not configured: missing RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET')
+      return res.status(500).json({ message: 'Razorpay is not configured on the server' })
+    }
     const { orderId } = req.body;
 
     if (!orderId) {
@@ -136,6 +146,11 @@ router.post("/create-order/product", requireAuth, async (req, res) => {
 // Create Razorpay order for tier upgrade
 router.post("/create-order/upgrade", requireAuth, async (req, res) => {
   try {
+    // Ensure Razorpay credentials are configured
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.error('Razorpay not configured: missing RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET')
+      return res.status(500).json({ message: 'Razorpay is not configured on the server' })
+    }
     const user = await User.findById(req.user.id);
 
     if (!user) {
@@ -207,7 +222,18 @@ router.post("/verify/appointment", requireAuth, async (req, res) => {
     );
 
     if (!isValid) {
-      return res.status(400).json({ message: "Invalid payment signature" });
+      // Attempt to fetch payment details from Razorpay for debugging (if configured)
+      let paymentStatus = 'unknown'
+      try {
+        const paymentInfo = await fetchPayment(razorpay_payment_id)
+        paymentStatus = paymentInfo && paymentInfo.status ? paymentInfo.status : paymentStatus
+        console.error('Payment verification failed. Razorpay payment status:', paymentStatus)
+      } catch (fetchErr) {
+        console.error('Payment verification failed and fetching payment info also failed:', fetchErr.message || fetchErr)
+      }
+
+      // Return informative response to help debug in production; do not expose sensitive data
+      return res.status(400).json({ message: 'Invalid payment signature', paymentStatus })
     }
 
     // Update appointment with payment details
@@ -265,7 +291,15 @@ router.post("/verify/product", requireAuth, async (req, res) => {
     );
 
     if (!isValid) {
-      return res.status(400).json({ message: "Invalid payment signature" });
+      let paymentStatus = 'unknown'
+      try {
+        const paymentInfo = await fetchPayment(razorpay_payment_id)
+        paymentStatus = paymentInfo && paymentInfo.status ? paymentInfo.status : paymentStatus
+        console.error('Product payment verification failed. Razorpay payment status:', paymentStatus)
+      } catch (fetchErr) {
+        console.error('Product payment verification failed and fetching payment info also failed:', fetchErr.message || fetchErr)
+      }
+      return res.status(400).json({ message: 'Invalid payment signature', paymentStatus })
     }
 
     // Update order with payment details
@@ -327,7 +361,15 @@ router.post("/verify/upgrade", requireAuth, async (req, res) => {
     );
 
     if (!isValid) {
-      return res.status(400).json({ message: "Invalid payment signature" });
+      let paymentStatus = 'unknown'
+      try {
+        const paymentInfo = await fetchPayment(razorpay_payment_id)
+        paymentStatus = paymentInfo && paymentInfo.status ? paymentInfo.status : paymentStatus
+        console.error('Upgrade payment verification failed. Razorpay payment status:', paymentStatus)
+      } catch (fetchErr) {
+        console.error('Upgrade payment verification failed and fetching payment info also failed:', fetchErr.message || fetchErr)
+      }
+      return res.status(400).json({ message: 'Invalid payment signature', paymentStatus })
     }
 
     // Update user account type to pro and set expiry for 30 days
