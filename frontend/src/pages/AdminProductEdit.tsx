@@ -106,9 +106,9 @@ export default function AdminProductEdit() {
       
       // If there's a new image URL in the response, update the preview
       if (response.product && response.product.image) {
-        const imageUrl = response.product.image.startsWith('http') 
-          ? response.product.image 
-          : `http://localhost:5000${response.product.image}`
+        const imageUrl = response.product.image.startsWith('http')
+          ? response.product.image
+          : `${API_CONFIG.BASE_URL}${response.product.image}`
         setImagePreview(imageUrl)
       }
       

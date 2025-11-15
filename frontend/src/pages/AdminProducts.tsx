@@ -29,7 +29,7 @@ export default function AdminProducts() {
     try {
       setLoading(true)
       const token = localStorage.getItem('ayurveda_auth_token')
-      const response = await fetch('http://localhost:5000/admin/products', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/admin/products`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -53,7 +53,7 @@ export default function AdminProducts() {
     
     try {
       const token = localStorage.getItem('ayurveda_auth_token')
-      const response = await fetch(`http://localhost:5000/admin/products/${id}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/admin/products/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { useNavigate, Link } from "react-router-dom"
 import { ArrowLeft, Upload, X } from "lucide-react"
+import { API_CONFIG } from '@/config/api.config'
 import { Button } from "@/components/ui/button"
 
 export default function AdminProductAdd() {
@@ -142,7 +143,7 @@ export default function AdminProductAdd() {
       data.append('ingredients', JSON.stringify(formData.ingredients))
       data.append('tags', JSON.stringify(formData.tags))
 
-      const response = await fetch('http://localhost:5000/admin/products', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/admin/products`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

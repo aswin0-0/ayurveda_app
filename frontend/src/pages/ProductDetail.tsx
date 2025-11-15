@@ -167,7 +167,7 @@ export default function ProductDetail() {
 
   const fetchProductDetail = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/products/${id}`)
+      const response = await fetch(`${API_CONFIG.BASE_URL}/products/${id}`)
       if (!response.ok) throw new Error('Failed to fetch product')
       const data = await response.json()
       console.log('Product loaded:', data.product)
@@ -185,7 +185,7 @@ export default function ProductDetail() {
 
   const fetchReviews = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/reviews/${id}?page=${reviewPage}&limit=5`)
+      const response = await fetch(`${API_CONFIG.BASE_URL}/reviews/${id}?page=${reviewPage}&limit=5`)
       if (!response.ok) throw new Error('Failed to fetch reviews')
       const data = await response.json()
       setReviews(data.reviews)
@@ -238,7 +238,7 @@ export default function ProductDetail() {
     setSubmittingReview(true)
     try {
       const token = localStorage.getItem('ayurveda_auth_token')
-      const response = await fetch(`http://localhost:5000/reviews/${id}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/reviews/${id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
